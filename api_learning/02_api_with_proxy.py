@@ -6,19 +6,43 @@ API学习 - 完美配置版（支持V2RayN代理）
 
 import requests
 import urllib3
+import socket
+import time
 
 # 禁用SSL警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ============ V2RayN 代理配置 ============
 USE_PROXY = True  # 改成False可以关闭代理
+PROXY_HOST = "127.0.0.1"
+PROXY_PORT = 10808
+TIMEOUT = 20  # 请求超时时间（秒）
+MAX_RETRIES = 2  # 失败后最多重试次数
 
+
+def check_proxy_available(host, port):
+    """检测代理端口是否可用"""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(3)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
+
+
+# 启动时自动检测代理
 if USE_PROXY:
-    proxies = {
-        'http': 'http://127.0.0.1:10808',
-        'https': 'http://127.0.0.1:10808',
-    }
-    print("🔧 使用代理: V2RayN (HTTP 10808端口)\n")
+    if check_proxy_available(PROXY_HOST, PROXY_PORT):
+        proxies = {
+            'http': f'http://{PROXY_HOST}:{PROXY_PORT}',
+            'https': f'http://{PROXY_HOST}:{PROXY_PORT}',
+        }
+        print(f"🔧 使用代理: V2RayN (HTTP {PROXY_PORT}端口)\n")
+    else:
+        proxies = None
+        print(f"⚠️  代理端口 {PROXY_PORT} 不可用，已自动切换为直连模式\n")
 else:
     proxies = None
     print("🔧 直连模式（不使用代理）\n")
@@ -27,35 +51,61 @@ else:
 # =========================================
 
 
-def api_request(url, description):
+def api_request(url, description, retries=MAX_RETRIES):
     """
     通用API请求函数
-    自动处理代理和异常
+    自动处理代理、重试和异常
     """
     print("=" * 60)
     print(f"请求: {description}")
     print("=" * 60)
     print(f"🌐 URL: {url}")
 
-    try:
-        response = requests.get(
-            url,
-            proxies=proxies,
-            verify=False,
-            timeout=10
-        )
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.get(
+                url,
+                proxies=proxies,
+                verify=False,
+                timeout=TIMEOUT
+            )
 
-        if response.status_code == 200:
-            print(f"✓ 成功！状态码: {response.status_code}")
-            print(f"⏱️  响应时间: {response.elapsed.total_seconds():.2f}秒")
-            return response.json()
-        else:
-            print(f"✗ 失败，状态码: {response.status_code}")
+            if response.status_code == 200:
+                print(f"✓ 成功！状态码: {response.status_code}")
+                print(f"⏱️  响应时间: {response.elapsed.total_seconds():.2f}秒")
+                return response.json()
+            elif response.status_code == 429:
+                print(f"⚠️  触发速率限制 (429)，等待后重试...")
+                time.sleep(3)
+                continue
+            elif response.status_code == 403:
+                print(f"✗ 被拒绝 (403): 可能是API调用次数用完了")
+                return None
+            else:
+                print(f"✗ 失败，状态码: {response.status_code}")
+                return None
+
+        except requests.exceptions.Timeout:
+            print(f"✗ 第{attempt}次请求超时（>{TIMEOUT}秒）", end="")
+        except requests.exceptions.ProxyError:
+            print(f"✗ 第{attempt}次代理连接失败，请检查V2RayN是否运行", end="")
+        except requests.exceptions.ConnectionError as e:
+            print(f"✗ 第{attempt}次连接失败: {e}", end="")
+        except requests.exceptions.JSONDecodeError:
+            print(f"✗ 返回的不是合法JSON，可能API服务异常")
             return None
+        except Exception as e:
+            print(f"✗ 第{attempt}次请求失败: {type(e).__name__}: {e}", end="")
 
-    except Exception as e:
-        print(f"✗ 请求失败: {type(e).__name__}")
-        return None
+        # 还有重试机会就等一下再试
+        if attempt < retries:
+            wait = attempt * 2
+            print(f"，{wait}秒后重试...")
+            time.sleep(wait)
+        else:
+            print(f"，已达到最大重试次数")
+
+    return None
 
 
 def test_joke_api():
@@ -102,38 +152,45 @@ def test_cat_fact_api():
 
 
 def test_ip_info_api():
-    """练习4：获取IP信息"""
+    """练习4：获取IP信息（有每日调用限制）"""
     data = api_request(
         "https://ipapi.co/json/",
-        "IP信息API"
+        "IP信息API（注意：免费版有每日调用限制）"
     )
 
     if data:
-        print(f"\n🌍 网络信息:")
-        print(f"   IP地址: {data.get('ip', 'N/A')}")
-        print(f"   城市: {data.get('city', 'N/A')}")
-        print(f"   地区: {data.get('region', 'N/A')}")
-        print(f"   国家: {data.get('country_name', 'N/A')}")
-        print(f"   运营商: {data.get('org', 'N/A')[:50]}...\n")
+        if 'error' in data:
+            print(f"\n⚠️  API返回错误: {data.get('reason', '未知原因')}（可能今日额度用完）")
+        else:
+            print(f"\n🌍 网络信息:")
+            print(f"   IP地址: {data.get('ip', 'N/A')}")
+            print(f"   城市: {data.get('city', 'N/A')}")
+            print(f"   地区: {data.get('region', 'N/A')}")
+            print(f"   国家: {data.get('country_name', 'N/A')}")
+            org = data.get('org', 'N/A')
+            print(f"   运营商: {org[:50]}{'...' if len(org) > 50 else ''}\n")
 
 
 def test_github_api():
-    """练习5：GitHub用户信息（无需认证）"""
+    """练习5：GitHub用户信息（无需认证，但限60次/小时）"""
     # 查询GitHub用户
     username = "torvalds"  # Linux创始人
 
     data = api_request(
         f"https://api.github.com/users/{username}",
-        f"GitHub API - 查询用户 {username}"
+        f"GitHub API - 查询用户 {username}（注意：未认证限60次/小时）"
     )
 
     if data:
-        print(f"\n💻 GitHub用户: {data['login']}")
-        print(f"   姓名: {data.get('name', 'N/A')}")
-        print(f"   粉丝: {data['followers']}")
-        print(f"   仓库数: {data['public_repos']}")
-        bio = data.get('bio') or '无简介'
-        print(f"   简介: {bio}\n")
+        if 'message' in data and 'rate limit' in data.get('message', '').lower():
+            print(f"\n⚠️  GitHub API 调用次数用完了，需要等一会儿再试")
+        else:
+            print(f"\n💻 GitHub用户: {data['login']}")
+            print(f"   姓名: {data.get('name', 'N/A')}")
+            print(f"   粉丝: {data['followers']}")
+            print(f"   仓库数: {data['public_repos']}")
+            bio = data.get('bio') or '无简介'
+            print(f"   简介: {bio}\n")
 
 
 def test_crypto_price_api():
