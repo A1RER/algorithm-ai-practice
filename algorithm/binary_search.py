@@ -24,8 +24,8 @@ def binary_search(arr, target):
 
 
 # 测试一下
-my_list = [1, 3, 5, 7, 9, 11, 13, 15]
-target_value = 7
+my_list = [1, 3, 5, 8, 9, 11, 13, 15]
+target_value = 8
 
 result = binary_search(my_list, target_value)
 
