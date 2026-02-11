@@ -1,9 +1,7 @@
 # API学习完整指南
 
-> **作者**: Chuyuan  
-> **日期**: 2025-02-08  
-> **学校**: 重庆邮电大学 通信工程专业  
-> **目标**: 理解API概念，为秋招算法岗做技术储备
+> **日期**: 2025-02-08
+> **目标**: 理解API概念，掌握HTTP请求与数据处理技能
 
 ---
 
@@ -25,7 +23,7 @@
 
 ### 1.1 为什么学习API？
 
-作为通信工程专业的学生，准备2026年北邮考研 + 秋招算法岗，需要：
+为了深入理解软件开发与数据交互，需要：
 - **技术储备**: 理解前后端交互，为全栈开发打基础
 - **项目经验**: API调用是实际项目的基础技能
 - **面试准备**: 很多公司考察对API、HTTP协议的理解
@@ -145,8 +143,8 @@ JSON (JavaScript Object Notation) = JavaScript对象表示法
 **示例**:
 ```json
 {
-  "name": "Chuyuan",
-  "school": "CQUPT",
+  "name": "Alice",
+  "school": "ExampleUniversity",
   "major": "Communication Engineering",
   "skills": ["Python", "MATLAB", "Java"],
   "projects": {
@@ -555,7 +553,6 @@ pip install requests
 ```python
 """
 API学习 - 完美配置版（支持V2RayN代理）
-作者: Chuyuan
 日期: 2025-02-08
 目标: 理解API概念，成功调用多个真实API
 """
@@ -1128,7 +1125,7 @@ JSON数据 ≈ 数字信号
 **考研准备（主线）**:
 - 信号与系统、通信原理等专业课
 - 数学、英语、政治
-- 目标：北邮
+- 目标：目标院校
 
 **秋招准备（辅线）**:
 - 算法能力：LeetCode 200+题
@@ -1344,10 +1341,10 @@ E:\path\to\venv\Scripts\python.exe script.py
 - 算法练习
 - 实战项目
 
-一步一个脚印，为北邮考研和秋招算法岗做好准备！💪
+一步一个脚印，持续学习，不断进步！💪
 
 ---
 
 *最后更新: 2025-02-08*  
 *版本: v1.0*  
-*作者: Chuyuan @ CQUPT*
+*版本: v1.0*
